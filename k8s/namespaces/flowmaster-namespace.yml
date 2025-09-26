@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flowmaster
+  labels:
+    name: flowmaster
+    app: flowmaster
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flowmaster-monitoring
+  labels:
+    name: flowmaster-monitoring
+    app: flowmaster
+    environment: production

@@ -1,0 +1,521 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: flowmaster-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: flowmaster123
+      MYSQL_DATABASE: flowmaster
+      MYSQL_USER: flowmaster
+      MYSQL_PASSWORD: flowmaster123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - flowmaster-network
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pflowmaster123"]
+      timeout: 20s
+      retries: 10
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: flowmaster-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - flowmaster-network
+    command: redis-server --appendonly yes --requirepass flowmaster123
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      timeout: 3s
+      retries: 5
+
+  # MongoDB 日志存储
+  mongodb:
+    image: mongo:7
+    container_name: flowmaster-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: flowmaster
+      MONGO_INITDB_ROOT_PASSWORD: flowmaster123
+      MONGO_INITDB_DATABASE: flowmaster_logs
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      timeout: 10s
+      retries: 5
+
+  # Elasticsearch 搜索引擎
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: flowmaster-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      timeout: 10s
+      retries: 5
+
+  # Kibana 日志分析
+  kibana:
+    image: kibana:8.11.0
+    container_name: flowmaster-kibana
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      timeout: 10s
+      retries: 5
+
+  # Kafka 消息队列
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: flowmaster-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: flowmaster-kafka
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      timeout: 10s
+      retries: 5
+
+  # RabbitMQ 消息队列
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: flowmaster-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: flowmaster
+      RABBITMQ_DEFAULT_PASS: flowmaster123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      timeout: 10s
+      retries: 5
+
+  # Nacos 服务注册中心
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: flowmaster-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_DB_NAME: nacos
+      MYSQL_SERVICE_USER: nacos
+      MYSQL_SERVICE_PASSWORD: nacos123
+      NACOS_AUTH_ENABLE: true
+      NACOS_AUTH_TOKEN: SecretKey012345678901234567890123456789012345678901234567890123456789
+      NACOS_AUTH_IDENTITY_KEY: serverIdentity
+      NACOS_AUTH_IDENTITY_VALUE: security
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - nacos_data:/home/nacos/data
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/v1/console/health"]
+      timeout: 10s
+      retries: 5
+
+  # MinIO 对象存储
+  minio:
+    image: minio/minio:latest
+    container_name: flowmaster-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: flowmaster
+      MINIO_ROOT_PASSWORD: flowmaster123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - flowmaster-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      timeout: 10s
+      retries: 5
+
+  # Zipkin 链路追踪
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: flowmaster-zipkin
+    restart: unless-stopped
+    ports:
+      - "9411:9411"
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9411/health"]
+      timeout: 10s
+      retries: 5
+
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: flowmaster-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - flowmaster-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      timeout: 10s
+      retries: 5
+
+  # Grafana 监控面板
+  grafana:
+    image: grafana/grafana:latest
+    container_name: flowmaster-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: flowmaster123
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      timeout: 10s
+      retries: 5
+
+  # FlowMaster 后端服务
+  flowmaster-user:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-user/Dockerfile
+    container_name: flowmaster-user
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flowmaster_user?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: flowmaster
+      SPRING_DATASOURCE_PASSWORD: flowmaster123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: flowmaster123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      timeout: 10s
+      retries: 5
+
+  flowmaster-auth:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-auth/Dockerfile
+    container_name: flowmaster-auth
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flowmaster_auth?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: flowmaster
+      SPRING_DATASOURCE_PASSWORD: flowmaster123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: flowmaster123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+      JWT_SECRET: FlowMasterJWTKey1234567890
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      timeout: 10s
+      retries: 5
+
+  flowmaster-workflow:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-workflow/Dockerfile
+    container_name: flowmaster-workflow
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flowmaster_workflow?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: flowmaster
+      SPRING_DATASOURCE_PASSWORD: flowmaster123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: flowmaster123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      timeout: 10s
+      retries: 5
+
+  flowmaster-gateway:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-gateway/Dockerfile
+    container_name: flowmaster-gateway
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      nacos:
+        condition: service_healthy
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      timeout: 10s
+      retries: 5
+
+  flowmaster-monitoring:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-monitoring/Dockerfile
+    container_name: flowmaster-monitoring
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flowmaster_monitoring?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: flowmaster
+      SPRING_DATASOURCE_PASSWORD: flowmaster123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: flowmaster123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      timeout: 10s
+      retries: 5
+
+  # FlowMaster 前端应用
+  flowmaster-web:
+    build:
+      context: .
+      dockerfile: flowmaster-frontend/flowmaster-web/Dockerfile
+    container_name: flowmaster-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      timeout: 10s
+      retries: 5
+
+  flowmaster-admin:
+    build:
+      context: .
+      dockerfile: flowmaster-frontend/flowmaster-admin/Dockerfile
+    container_name: flowmaster-admin
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/"]
+      timeout: 10s
+      retries: 5
+
+  flowmaster-designer:
+    build:
+      context: .
+      dockerfile: flowmaster-frontend/flowmaster-designer/Dockerfile
+    container_name: flowmaster-designer
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/"]
+      timeout: 10s
+      retries: 5
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: flowmaster-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - flowmaster-web
+      - flowmaster-admin
+      - flowmaster-designer
+      - flowmaster-gateway
+    networks:
+      - flowmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      timeout: 10s
+      retries: 5
+
+volumes:
+  mysql_data:
+  redis_data:
+  mongodb_data:
+  elasticsearch_data:
+  rabbitmq_data:
+  nacos_data:
+  minio_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  flowmaster-network:
+    driver: bridge

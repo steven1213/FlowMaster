@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flowmaster-user
+  namespace: flowmaster
+  labels:
+    app: flowmaster-user
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flowmaster-user
+  template:
+    metadata:
+      labels:
+        app: flowmaster-user
+        version: v1
+    spec:
+      containers:
+      - name: flowmaster-user
+        image: flowmaster/user:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "k8s"
+        envFrom:
+        - configMapRef:
+            name: flowmaster-config
+        - secretRef:
+            name: flowmaster-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flowmaster-user
+  namespace: flowmaster
+  labels:
+    app: flowmaster-user
+spec:
+  selector:
+    app: flowmaster-user
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP

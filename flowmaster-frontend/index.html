@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowMaster - 工作流管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 60px;
+            max-width: 800px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .service-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+        
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .service-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .service-description {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background-color: #52c41a;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-offline {
+            background-color: #ff4d4f;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 0.9rem;
+        }
+        
+        .quick-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .quick-link {
+            color: #667eea;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid #667eea;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-link:hover {
+            background-color: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🚀 FlowMaster</div>
+        <div class="subtitle">企业级工作流管理系统</div>
+        
+        <div class="services-grid">
+            <div class="service-card" onclick="openService('web')">
+                <div class="service-icon">🌐</div>
+                <div class="service-title">
+                    <span class="status-indicator status-online"></span>
+                    用户工作台
+                </div>
+                <div class="service-description">
+                    面向最终用户的工作流操作界面，提供任务处理、审批、监控等功能
+                </div>
+            </div>
+            
+            <div class="service-card" onclick="openService('admin')">
+                <div class="service-icon">⚙️</div>
+                <div class="service-title">
+                    <span class="status-indicator status-online"></span>
+                    管理后台
+                </div>
+                <div class="service-description">
+                    系统管理员界面，提供用户管理、权限配置、系统监控等功能
+                </div>
+            </div>
+            
+            <div class="service-card" onclick="openService('designer')">
+                <div class="service-icon">🎨</div>
+                <div class="service-title">
+                    <span class="status-indicator status-online"></span>
+                    流程设计器
+                </div>
+                <div class="service-description">
+                    可视化流程设计工具，支持拖拽式流程建模和BPMN标准
+                </div>
+            </div>
+        </div>
+        
+        <div class="quick-links">
+            <a href="http://localhost:8081/user-service/actuator/health" target="_blank" class="quick-link">后端健康检查</a>
+            <a href="http://localhost:8081/user-service/swagger-ui.html" target="_blank" class="quick-link">API文档</a>
+            <a href="http://localhost:3000" target="_blank" class="quick-link">直接访问Web</a>
+        </div>
+        
+        <div class="footer">
+            <p>FlowMaster v1.0.0 | 基于Spring Boot + React + Flowable构建</p>
+            <p>服务状态：<span class="status-indicator status-online"></span>在线</p>
+        </div>
+    </div>
+
+    <script src="flowmaster-integration.js"></script>
+    <script>
+        // 打开服务
+        function openService(serviceKey) {
+            if (window.FlowMaster) {
+                const isOnline = window.FlowMaster.getServiceStatus(serviceKey);
+                if (isOnline) {
+                    window.FlowMaster.openService(serviceKey);
+                } else {
+                    alert(`${FlowMasterConfig.services[serviceKey].name} 服务暂时不可用，请稍后重试`);
+                }
+            }
+        }
+        
+        // 页面加载完成后的初始化
+        window.addEventListener('load', () => {
+            // 更新服务状态显示
+            updateServiceStatus();
+            
+            // 定期更新状态
+            setInterval(updateServiceStatus, 5000);
+            
+            // 显示系统信息
+            showSystemInfo();
+        });
+        
+        // 更新服务状态显示
+        function updateServiceStatus() {
+            if (!window.FlowMaster) return;
+            
+            Object.keys(FlowMasterConfig.services).forEach(key => {
+                const isOnline = window.FlowMaster.getServiceStatus(key);
+                const indicator = document.querySelector(`[onclick="openService('${key}')"] .status-indicator`);
+                if (indicator) {
+                    indicator.className = `status-indicator ${isOnline ? 'status-online' : 'status-offline'}`;
+                }
+            });
+        }
+        
+        // 显示系统信息
+        function showSystemInfo() {
+            const footer = document.querySelector('.footer');
+            const systemInfo = document.createElement('div');
+            systemInfo.innerHTML = `
+                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; font-size: 0.85rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; text-align: left;">
+                        <div>
+                            <strong>🔧 后端服务</strong><br>
+                            用户服务: <span class="status-indicator status-online"></span> 8081<br>
+                            认证服务: <span class="status-indicator status-offline"></span> 8081<br>
+                            工作流服务: <span class="status-indicator status-offline"></span> 8082
+                        </div>
+                        <div>
+                            <strong>🌐 前端服务</strong><br>
+                            用户工作台: <span class="status-indicator status-online"></span> 3000<br>
+                            管理后台: <span class="status-indicator status-online"></span> 3003<br>
+                            流程设计器: <span class="status-indicator status-online"></span> 3001
+                        </div>
+                        <div>
+                            <strong>📊 系统状态</strong><br>
+                            总服务数: 6<br>
+                            在线服务: 4<br>
+                            离线服务: 2<br>
+                            系统负载: 正常
+                        </div>
+                    </div>
+                </div>
+            `;
+            footer.appendChild(systemInfo);
+        }
+        
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1':
+                    openService('web');
+                    break;
+                case '2':
+                    openService('admin');
+                    break;
+                case '3':
+                    openService('designer');
+                    break;
+                case 'h':
+                case 'H':
+                    showHelp();
+                    break;
+            }
+        });
+        
+        // 显示帮助信息
+        function showHelp() {
+            const helpText = `
+FlowMaster 快捷键：
+1 - 打开用户工作台
+2 - 打开管理后台  
+3 - 打开流程设计器
+H - 显示此帮助信息
+
+服务地址：
+- 用户工作台: http://localhost:3000
+- 管理后台: http://localhost:3003
+- 流程设计器: http://localhost:3001
+- 后端API: http://localhost:8081/user-service
+- API文档: http://localhost:8081/user-service/swagger-ui.html
+            `;
+            alert(helpText);
+        }
+        
+        // 添加右键菜单
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            showContextMenu(e.clientX, e.clientY);
+        });
+        
+        function showContextMenu(x, y) {
+            const menu = document.createElement('div');
+            menu.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                z-index: 1000;
+                padding: 5px 0;
+            `;
+            
+            const items = [
+                { text: '刷新页面', action: () => location.reload() },
+                { text: '检查服务状态', action: updateServiceStatus },
+                { text: '显示帮助', action: showHelp },
+                { text: '开发者工具', action: () => console.log('FlowMaster Config:', FlowMasterConfig) }
+            ];
+            
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.textContent = item.text;
+                div.style.cssText = 'padding: 8px 15px; cursor: pointer; font-size: 14px;';
+                div.addEventListener('mouseenter', () => div.style.backgroundColor = '#f5f5f5');
+                div.addEventListener('mouseleave', () => div.style.backgroundColor = 'white');
+                div.addEventListener('click', () => {
+                    item.action();
+                    document.body.removeChild(menu);
+                });
+                menu.appendChild(div);
+            });
+            
+            document.body.appendChild(menu);
+            
+            // 点击其他地方关闭菜单
+            setTimeout(() => {
+                document.addEventListener('click', () => {
+                    if (document.body.contains(menu)) {
+                        document.body.removeChild(menu);
+                    }
+                }, { once: true });
+            }, 0);
+        }
+    </script>
+</body>
+</html>

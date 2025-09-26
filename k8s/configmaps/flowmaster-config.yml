@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flowmaster-config
+  namespace: flowmaster
+data:
+  # 数据库配置
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/flowmaster_user?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai"
+  SPRING_DATASOURCE_USERNAME: "flowmaster"
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "com.mysql.cj.jdbc.Driver"
+  
+  # Redis配置
+  SPRING_REDIS_HOST: "redis"
+  SPRING_REDIS_PORT: "6379"
+  SPRING_REDIS_PASSWORD: "flowmaster123"
+  SPRING_REDIS_DATABASE: "0"
+  
+  # MongoDB配置
+  SPRING_DATA_MONGODB_HOST: "mongodb"
+  SPRING_DATA_MONGODB_PORT: "27017"
+  SPRING_DATA_MONGODB_DATABASE: "flowmaster_logs"
+  SPRING_DATA_MONGODB_USERNAME: "flowmaster"
+  
+  # Elasticsearch配置
+  SPRING_ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+  
+  # Nacos配置
+  SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: "nacos:8848"
+  SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: "nacos:8848"
+  SPRING_CLOUD_NACOS_USERNAME: "nacos"
+  
+  # Zipkin配置
+  SPRING_ZIPKIN_BASE_URL: "http://zipkin:9411"
+  
+  # 应用配置
+  SPRING_PROFILES_ACTIVE: "k8s"
+  SERVER_PORT: "8080"
+  
+  # 日志配置
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_COM_FLOWMASTER: "DEBUG"
+  LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  
+  # 监控配置
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,metrics,prometheus"
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "always"
+  MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: "true"

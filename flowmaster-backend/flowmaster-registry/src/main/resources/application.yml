@@ -1,0 +1,66 @@
+server:
+  port: 8848
+  servlet:
+    context-path: /nacos
+
+spring:
+  application:
+    name: flowmaster-registry
+  
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        namespace: flowmaster
+        group: DEFAULT_GROUP
+        metadata:
+          version: 1.0.0
+          region: beijing
+          zone: beijing-zone
+      config:
+        server-addr: localhost:8848
+        namespace: flowmaster
+        group: DEFAULT_GROUP
+        file-extension: yml
+        refresh-enabled: true
+
+# 监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# 日志配置
+logging:
+  level:
+    com.flowmaster.registry: DEBUG
+    com.alibaba.cloud: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
+
+# Nacos配置
+nacos:
+  server:
+    addr: localhost:8848
+    namespace: flowmaster
+    group: DEFAULT_GROUP
+  client:
+    service:
+      name: flowmaster-registry
+      weight: 1
+      healthy: true
+      enabled: true
+      ephemeral: true
+      cluster-name: DEFAULT
+    naming:
+      load-balancer-cache-millis: 10000
+      load-balancer-cache-update-threshold: 1000

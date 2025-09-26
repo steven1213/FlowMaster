@@ -1,0 +1,160 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: flowmaster-gateway
+  
+  # 设置为响应式Web应用类型
+  main:
+    web-application-type: reactive
+  
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+    gateway:
+      # 禁用Redis限流器
+      redis:
+        enabled: false
+      # 全局跨域配置
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "*"
+            allowed-methods: "*"
+            allowed-headers: "*"
+            allow-credentials: true
+      
+      # 路由配置
+      routes:
+        # 用户管理服务路由
+        - id: user-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/user/**
+          filters:
+            - StripPrefix=1
+        
+        # 认证授权服务路由
+        - id: auth-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=1
+        
+        # 工作流引擎服务路由
+        - id: workflow-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/workflow/**
+          filters:
+            - StripPrefix=1
+        
+        # Swagger文档聚合
+        - id: swagger-ui
+          uri: http://localhost:8080
+          predicates:
+            - Path=/swagger-ui/**
+          filters:
+            - RewritePath=/swagger-ui/(?<path>.*), /$\{path}/swagger-ui.html
+        
+        # API文档聚合
+        - id: api-docs
+          uri: http://localhost:8080
+          predicates:
+            - Path=/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+
+      # 默认过滤器
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 100
+            redis-rate-limiter.burstCapacity: 200
+            redis-rate-limiter.requestedTokens: 1
+        - AddRequestHeader=X-Gateway-Source, flowmaster-gateway
+        - AddResponseHeader=X-Gateway-Source, flowmaster-gateway
+
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
+  # 安全配置
+  security:
+    user:
+      name: admin
+      password: admin123
+
+# SpringDoc配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    displayRequestDuration: true
+    displayOperationId: true
+    showExtensions: true
+    showCommonExtensions: true
+
+# 监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# 日志配置
+logging:
+  level:
+    com.flowmaster.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
+
+# JWT配置
+jwt:
+  secret: flowmaster-gateway-secret-key-2024
+  expiration: 3600000
+  refresh-expiration: 604800000
+  issuer: flowmaster-gateway
+
+# 限流配置
+rate-limit:
+  enabled: true
+  default-rate: 100
+  default-burst: 200
+  user-rate: 10
+  user-burst: 20
+  auth-rate: 5
+  auth-burst: 10
+  workflow-rate: 20
+  workflow-burst: 40

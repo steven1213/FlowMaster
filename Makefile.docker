@@ -1,0 +1,166 @@
+# FlowMaster Docker 部署 Makefile
+# 提供便捷的Docker部署命令
+
+.PHONY: help build start stop restart status logs health-check cleanup
+
+# 默认目标
+help: ## 显示帮助信息
+	@echo "FlowMaster Docker 部署管理"
+	@echo ""
+	@echo "可用命令:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+# Docker 命令
+docker-build: ## 构建所有Docker镜像
+	@echo "构建Docker镜像..."
+	docker build -t flowmaster/user:latest -f flowmaster-backend/flowmaster-user/Dockerfile .
+	docker build -t flowmaster/auth:latest -f flowmaster-backend/flowmaster-auth/Dockerfile .
+	docker build -t flowmaster/workflow:latest -f flowmaster-backend/flowmaster-workflow/Dockerfile .
+	docker build -t flowmaster/gateway:latest -f flowmaster-backend/flowmaster-gateway/Dockerfile .
+	docker build -t flowmaster/monitoring:latest -f flowmaster-backend/flowmaster-monitoring/Dockerfile .
+	docker build -t flowmaster/web:latest -f flowmaster-frontend/flowmaster-web/Dockerfile .
+	docker build -t flowmaster/admin:latest -f flowmaster-frontend/flowmaster-admin/Dockerfile .
+	docker build -t flowmaster/designer:latest -f flowmaster-frontend/flowmaster-designer/Dockerfile .
+
+docker-start: ## 启动核心服务
+	@echo "启动核心服务..."
+	docker-compose up -d
+
+docker-start-full: ## 启动完整服务(包含监控)
+	@echo "启动完整服务..."
+	docker-compose -f docker-compose.full.yml up -d
+
+docker-stop: ## 停止所有服务
+	@echo "停止所有服务..."
+	docker-compose down
+	docker-compose -f docker-compose.full.yml down
+
+docker-restart: ## 重启服务
+	@echo "重启服务..."
+	docker-compose restart
+
+docker-logs: ## 查看所有服务日志
+	docker-compose logs -f
+
+docker-logs-user: ## 查看用户服务日志
+	docker-compose logs -f flowmaster-user
+
+docker-logs-auth: ## 查看认证服务日志
+	docker-compose logs -f flowmaster-auth
+
+docker-logs-workflow: ## 查看工作流服务日志
+	docker-compose logs -f flowmaster-workflow
+
+docker-logs-gateway: ## 查看网关服务日志
+	docker-compose logs -f flowmaster-gateway
+
+docker-logs-monitoring: ## 查看监控服务日志
+	docker-compose logs -f flowmaster-monitoring
+
+docker-status: ## 查看服务状态
+	@echo "服务状态："
+	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep flowmaster || echo "没有运行中的FlowMaster服务"
+	@echo ""
+	@echo "服务访问地址："
+	@echo "  Web应用: http://localhost:3000"
+	@echo "  管理后台: http://localhost:3003"
+	@echo "  工作流设计器: http://localhost:3001"
+	@echo "  API网关: http://localhost:8083"
+	@echo "  Nacos控制台: http://localhost:8848/nacos (nacos/nacos123)"
+	@echo "  MySQL: localhost:3306 (root/flowmaster123)"
+	@echo "  Redis: localhost:6379 (flowmaster123)"
+
+docker-health: ## 执行健康检查
+	@echo "执行健康检查..."
+	@curl -f http://localhost:8080/actuator/health > /dev/null 2>&1 && echo "✓ 用户服务健康" || echo "✗ 用户服务不健康"
+	@curl -f http://localhost:8081/actuator/health > /dev/null 2>&1 && echo "✓ 认证服务健康" || echo "✗ 认证服务不健康"
+	@curl -f http://localhost:8082/actuator/health > /dev/null 2>&1 && echo "✓ 工作流服务健康" || echo "✗ 工作流服务不健康"
+	@curl -f http://localhost:8083/actuator/health > /dev/null 2>&1 && echo "✓ 网关服务健康" || echo "✗ 网关服务不健康"
+	@curl -f http://localhost:8084/actuator/health > /dev/null 2>&1 && echo "✓ 监控服务健康" || echo "✗ 监控服务不健康"
+	@curl -f http://localhost:3000/ > /dev/null 2>&1 && echo "✓ Web应用健康" || echo "✗ Web应用不健康"
+	@curl -f http://localhost:3003/ > /dev/null 2>&1 && echo "✓ 管理后台健康" || echo "✗ 管理后台不健康"
+	@curl -f http://localhost:3001/ > /dev/null 2>&1 && echo "✓ 设计器健康" || echo "✗ 设计器不健康"
+
+docker-clean: ## 清理Docker资源
+	@echo "清理Docker资源..."
+	docker-compose down -v
+	docker-compose -f docker-compose.full.yml down -v
+	docker images | grep flowmaster | awk '{print $$3}' | xargs docker rmi -f
+	docker system prune -f
+
+# 数据库命令
+db-init: ## 初始化数据库
+	@echo "初始化数据库..."
+	@docker exec flowmaster-mysql mysql -u root -pflowmaster123 -e "CREATE DATABASE IF NOT EXISTS flowmaster_user;" 2>/dev/null || echo "用户数据库已存在"
+	@docker exec flowmaster-mysql mysql -u root -pflowmaster123 -e "CREATE DATABASE IF NOT EXISTS flowmaster_auth;" 2>/dev/null || echo "认证数据库已存在"
+	@docker exec flowmaster-mysql mysql -u root -pflowmaster123 -e "CREATE DATABASE IF NOT EXISTS flowmaster_workflow;" 2>/dev/null || echo "工作流数据库已存在"
+	@docker exec flowmaster-mysql mysql -u root -pflowmaster123 -e "CREATE DATABASE IF NOT EXISTS flowmaster_gateway;" 2>/dev/null || echo "网关数据库已存在"
+	@docker exec flowmaster-mysql mysql -u root -pflowmaster123 -e "CREATE DATABASE IF NOT EXISTS flowmaster_monitoring;" 2>/dev/null || echo "监控数据库已存在"
+
+db-backup: ## 备份数据库
+	@echo "备份数据库..."
+	@mkdir -p backups
+	@docker exec flowmaster-mysql mysqldump -u root -pflowmaster123 --all-databases > backups/mysql_backup_$(shell date +%Y%m%d_%H%M%S).sql
+	@echo "数据库备份完成"
+
+db-restore: ## 恢复数据库(需要指定备份文件)
+	@echo "请指定备份文件: make db-restore BACKUP_FILE=backups/mysql_backup_20240101_120000.sql"
+	@if [ -z "$(BACKUP_FILE)" ]; then echo "错误: 请指定备份文件"; exit 1; fi
+	@docker exec -i flowmaster-mysql mysql -u root -pflowmaster123 < $(BACKUP_FILE)
+	@echo "数据库恢复完成"
+
+# 快速部署命令
+quick-start: docker-build docker-start db-init ## 快速启动(构建+启动+初始化数据库)
+	@echo "快速启动完成！"
+	@echo "访问地址:"
+	@echo "  Web应用: http://localhost:3000"
+	@echo "  管理后台: http://localhost:3003"
+	@echo "  工作流设计器: http://localhost:3001"
+
+quick-stop: docker-stop ## 快速停止
+	@echo "服务已停止"
+
+# 监控命令
+monitor: ## 查看监控面板地址
+	@echo "监控面板地址:"
+	@echo "  Grafana: http://localhost:3000 (admin/flowmaster123)"
+	@echo "  Prometheus: http://localhost:9090"
+	@echo "  Zipkin: http://localhost:9411"
+	@echo "  Kibana: http://localhost:5601"
+	@echo "  Nacos: http://localhost:8848/nacos (nacos/nacos123)"
+	@echo "  RabbitMQ: http://localhost:15672 (flowmaster/flowmaster123)"
+	@echo "  MinIO: http://localhost:9001 (flowmaster/flowmaster123)"
+
+# 开发命令
+dev-build: ## 构建开发环境
+	@echo "构建开发环境..."
+	docker-compose up -d mysql redis nacos
+	@echo "等待基础设施启动..."
+	@sleep 30
+	@echo "开发环境构建完成"
+
+dev-logs: ## 查看开发环境日志
+	docker-compose logs -f mysql redis nacos
+
+# 生产命令
+prod-start: docker-build docker-start-full ## 生产环境启动
+	@echo "生产环境启动完成！"
+
+prod-stop: docker-stop ## 生产环境停止
+	@echo "生产环境已停止"
+
+# 清理命令
+clean: docker-clean ## 清理所有资源
+	@echo "清理完成"
+
+# 帮助命令
+info: ## 显示项目信息
+	@echo "FlowMaster 工作流管理系统"
+	@echo "版本: 1.0.0"
+	@echo "技术栈: Spring Boot + React + Docker"
+	@echo ""
+	@echo "快速开始:"
+	@echo "  make quick-start    # 快速启动"
+	@echo "  make docker-status  # 查看状态"
+	@echo "  make docker-health  # 健康检查"
+	@echo "  make quick-stop     # 快速停止"

@@ -1,0 +1,76 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # FlowMaster 后端服务监控
+  - job_name: 'flowmaster-user'
+    static_configs:
+      - targets: ['flowmaster-user:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+
+  - job_name: 'flowmaster-auth'
+    static_configs:
+      - targets: ['flowmaster-auth:8081']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+
+  - job_name: 'flowmaster-workflow'
+    static_configs:
+      - targets: ['flowmaster-workflow:8082']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+
+  - job_name: 'flowmaster-gateway'
+    static_configs:
+      - targets: ['flowmaster-gateway:8083']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+
+  - job_name: 'flowmaster-monitoring'
+    static_configs:
+      - targets: ['flowmaster-monitoring:8084']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+
+  # 基础设施监控
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql:9104']
+    scrape_interval: 30s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 30s
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # 链路追踪
+  - job_name: 'zipkin'
+    static_configs:
+      - targets: ['zipkin:9411']
+    scrape_interval: 30s

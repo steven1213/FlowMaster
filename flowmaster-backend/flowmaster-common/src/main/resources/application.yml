@@ -1,0 +1,46 @@
+# FlowMaster Common 公共配置
+
+# 应用配置
+spring:
+  application:
+    name: flowmaster-common
+  
+  # 日志配置
+  logging:
+    level:
+      com.flowmaster: INFO
+      org.springframework.security: DEBUG
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+      file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# JWT配置
+jwt:
+  secret: flowmaster-secret-key-2024
+  expiration: 86400000  # 24小时
+  refresh-expiration: 604800000  # 7天
+
+# 缓存配置
+cache:
+  caffeine:
+    spec: maximumSize=1000,expireAfterWrite=30m
+  redis:
+    default-ttl: 3600  # 1小时
+    key-prefix: "flowmaster:"
+
+# 监控配置
+monitoring:
+  metrics:
+    enabled: true
+  tracing:
+    enabled: true

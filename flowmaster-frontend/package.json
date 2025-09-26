@@ -1,0 +1,66 @@
+{
+  "name": "flowmaster-frontend",
+  "version": "1.0.0",
+  "description": "FlowMaster前端应用集合",
+  "private": true,
+  "workspaces": [
+    "flowmaster-web",
+    "flowmaster-mobile", 
+    "flowmaster-designer",
+    "flowmaster-admin"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:web && npm run install:mobile && npm run install:designer && npm run install:admin",
+    "install:web": "cd flowmaster-web && npm install",
+    "install:mobile": "cd flowmaster-mobile && npm install", 
+    "install:designer": "cd flowmaster-designer && npm install",
+    "install:admin": "cd flowmaster-admin && npm install",
+    "dev:web": "cd flowmaster-web && npm run dev",
+    "dev:mobile": "cd flowmaster-mobile && npm run dev",
+    "dev:designer": "cd flowmaster-designer && npm run dev", 
+    "dev:admin": "cd flowmaster-admin && npm run dev",
+    "build:all": "npm run build:web && npm run build:mobile && npm run build:designer && npm run build:admin",
+    "build:web": "cd flowmaster-web && npm run build",
+    "build:mobile": "cd flowmaster-mobile && npm run build",
+    "build:designer": "cd flowmaster-designer && npm run build",
+    "build:admin": "cd flowmaster-admin && npm run build",
+    "test:all": "npm run test:web && npm run test:mobile && npm run test:designer && npm run test:admin",
+    "test:web": "cd flowmaster-web && npm run test",
+    "test:mobile": "cd flowmaster-mobile && npm run test",
+    "test:designer": "cd flowmaster-designer && npm run test",
+    "test:admin": "cd flowmaster-admin && npm run test",
+    "lint:all": "npm run lint:web && npm run lint:mobile && npm run lint:designer && npm run lint:admin",
+    "lint:web": "cd flowmaster-web && npm run lint",
+    "lint:mobile": "cd flowmaster-mobile && npm run lint",
+    "lint:designer": "cd flowmaster-designer && npm run lint",
+    "lint:admin": "cd flowmaster-admin && npm run lint"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/flowmaster.git",
+    "directory": "flowmaster-frontend"
+  },
+  "keywords": [
+    "flowmaster",
+    "workflow",
+    "approval",
+    "react",
+    "typescript",
+    "frontend"
+  ],
+  "author": "FlowMaster Team",
+  "license": "MIT"
+}

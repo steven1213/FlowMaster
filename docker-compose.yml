@@ -1,0 +1,233 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: flowmaster-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: flowmaster123
+      MYSQL_DATABASE: flowmaster
+      MYSQL_USER: flowmaster
+      MYSQL_PASSWORD: flowmaster123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - flowmaster-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: flowmaster-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - flowmaster-network
+    command: redis-server --appendonly yes --requirepass flowmaster123
+
+  # Nacos 服务注册中心
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: flowmaster-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_DB_NAME: nacos
+      MYSQL_SERVICE_USER: nacos
+      MYSQL_SERVICE_PASSWORD: nacos123
+      NACOS_AUTH_ENABLE: true
+      NACOS_AUTH_TOKEN: SecretKey012345678901234567890123456789012345678901234567890123456789
+      NACOS_AUTH_IDENTITY_KEY: serverIdentity
+      NACOS_AUTH_IDENTITY_VALUE: security
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    depends_on:
+      - mysql
+    volumes:
+      - nacos_data:/home/nacos/data
+    networks:
+      - flowmaster-network
+
+  # FlowMaster 后端服务
+  flowmaster-user:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-user/Dockerfile
+    container_name: flowmaster-user
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flowmaster_user?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: flowmaster
+      SPRING_DATASOURCE_PASSWORD: flowmaster123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: flowmaster123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+    depends_on:
+      - mysql
+      - redis
+      - nacos
+    networks:
+      - flowmaster-network
+
+  flowmaster-auth:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-auth/Dockerfile
+    container_name: flowmaster-auth
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flowmaster_auth?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: flowmaster
+      SPRING_DATASOURCE_PASSWORD: flowmaster123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: flowmaster123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+      JWT_SECRET: FlowMasterJWTKey1234567890
+    depends_on:
+      - mysql
+      - redis
+      - nacos
+    networks:
+      - flowmaster-network
+
+  flowmaster-workflow:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-workflow/Dockerfile
+    container_name: flowmaster-workflow
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flowmaster_workflow?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: flowmaster
+      SPRING_DATASOURCE_PASSWORD: flowmaster123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: flowmaster123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+    depends_on:
+      - mysql
+      - redis
+      - nacos
+    networks:
+      - flowmaster-network
+
+  flowmaster-gateway:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-gateway/Dockerfile
+    container_name: flowmaster-gateway
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+    depends_on:
+      - nacos
+    networks:
+      - flowmaster-network
+
+  flowmaster-monitoring:
+    build:
+      context: .
+      dockerfile: flowmaster-backend/flowmaster-monitoring/Dockerfile
+    container_name: flowmaster-monitoring
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flowmaster_monitoring?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: flowmaster
+      SPRING_DATASOURCE_PASSWORD: flowmaster123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: flowmaster123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_USERNAME: nacos
+      SPRING_CLOUD_NACOS_PASSWORD: nacos123
+    depends_on:
+      - mysql
+      - redis
+      - nacos
+    networks:
+      - flowmaster-network
+
+  # FlowMaster 前端应用
+  flowmaster-web:
+    build:
+      context: .
+      dockerfile: flowmaster-frontend/flowmaster-web/Dockerfile
+    container_name: flowmaster-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - flowmaster-network
+
+  flowmaster-admin:
+    build:
+      context: .
+      dockerfile: flowmaster-frontend/flowmaster-admin/Dockerfile
+    container_name: flowmaster-admin
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    networks:
+      - flowmaster-network
+
+  flowmaster-designer:
+    build:
+      context: .
+      dockerfile: flowmaster-frontend/flowmaster-designer/Dockerfile
+    container_name: flowmaster-designer
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    networks:
+      - flowmaster-network
+
+volumes:
+  mysql_data:
+  redis_data:
+  nacos_data:
+
+networks:
+  flowmaster-network:
+    driver: bridge

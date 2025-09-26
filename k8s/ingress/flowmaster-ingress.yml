@@ -1,0 +1,70 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flowmaster-ingress
+  namespace: flowmaster
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - flowmaster.local
+    - api.flowmaster.local
+    - admin.flowmaster.local
+    - designer.flowmaster.local
+    secretName: flowmaster-tls
+  rules:
+  # 主应用
+  - host: flowmaster.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flowmaster-web
+            port:
+              number: 3000
+  
+  # API 网关
+  - host: api.flowmaster.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flowmaster-gateway
+            port:
+              number: 8083
+  
+  # 管理后台
+  - host: admin.flowmaster.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flowmaster-admin
+            port:
+              number: 3003
+  
+  # 工作流设计器
+  - host: designer.flowmaster.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flowmaster-designer
+            port:
+              number: 3001
