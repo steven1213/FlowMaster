@@ -12,14 +12,21 @@ spring:
     web-application-type: reactive
   
   cloud:
+    nacos:
+      discovery:
+        enabled: false  # 禁用Nacos服务发现
+      config:
+        enabled: false
     config:
       enabled: false
-    discovery:
+      import-check:
+        enabled: false
+    compatibility-verifier:
       enabled: false
     gateway:
-      # 禁用Redis限流器
+      # 启用Redis支持
       redis:
-        enabled: false
+        enabled: true
       # 全局跨域配置
       globalcors:
         cors-configurations:
@@ -33,60 +40,108 @@ spring:
       routes:
         # 用户管理服务路由
         - id: user-service
-          uri: http://localhost:8081
+          uri: lb://flowmaster-user-service
           predicates:
             - Path=/user/**
           filters:
             - StripPrefix=1
+            - RewritePath=/(?<path>.*), /user-service/$\{path}
         
         # 认证授权服务路由
         - id: auth-service
-          uri: http://localhost:8082
+          uri: lb://flowmaster-auth-service
           predicates:
             - Path=/auth/**
           filters:
             - StripPrefix=1
+            - RewritePath=/(?<path>.*), /auth-service/$\{path}
         
         # 工作流引擎服务路由
         - id: workflow-service
-          uri: http://localhost:8083
+          uri: lb://flowmaster-workflow-service
           predicates:
             - Path=/workflow/**
           filters:
             - StripPrefix=1
+            - RewritePath=/(?<path>.*), /workflow-service/$\{path}
         
-        # Swagger文档聚合
-        - id: swagger-ui
-          uri: http://localhost:8080
+        # 监控服务路由
+        - id: monitoring-service
+          uri: lb://flowmaster-monitoring
           predicates:
-            - Path=/swagger-ui/**
+            - Path=/monitoring/**
           filters:
-            - RewritePath=/swagger-ui/(?<path>.*), /$\{path}/swagger-ui.html
+            - StripPrefix=1
+            - RewritePath=/(?<path>.*), /monitoring/$\{path}
         
-        # API文档聚合
-        - id: api-docs
-          uri: http://localhost:8080
+        # 注册中心路由
+        - id: registry-service
+          uri: http://localhost:8761
           predicates:
-            - Path=/v3/api-docs/**
+            - Path=/registry/**
           filters:
-            - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+            - StripPrefix=1
+        
+        # 用户服务Swagger文档
+        - id: user-service-docs
+          uri: lb://flowmaster-user-service
+          predicates:
+            - Path=/swagger-ui/user/**
+          filters:
+            - RewritePath=/swagger-ui/user/(?<path>.*), /user-service/swagger-ui/$\{path}
+        
+        # 认证服务Swagger文档
+        - id: auth-service-docs
+          uri: lb://flowmaster-auth-service
+          predicates:
+            - Path=/swagger-ui/auth/**
+          filters:
+            - RewritePath=/swagger-ui/auth/(?<path>.*), /auth-service/swagger-ui/$\{path}
+        
+        # 工作流服务Swagger文档
+        - id: workflow-service-docs
+          uri: lb://flowmaster-workflow-service
+          predicates:
+            - Path=/swagger-ui/workflow/**
+          filters:
+            - RewritePath=/swagger-ui/workflow/(?<path>.*), /workflow-service/swagger-ui/$\{path}
+        
+        # 用户服务API文档
+        - id: user-service-api-docs
+          uri: lb://flowmaster-user-service
+          predicates:
+            - Path=/v3/api-docs/user
+          filters:
+            - RewritePath=/v3/api-docs/user, /user-service/v3/api-docs
+        
+        # 认证服务API文档
+        - id: auth-service-api-docs
+          uri: lb://flowmaster-auth-service
+          predicates:
+            - Path=/v3/api-docs/auth
+          filters:
+            - RewritePath=/v3/api-docs/auth, /auth-service/v3/api-docs
+        
+        # 工作流服务API文档
+        - id: workflow-service-api-docs
+          uri: lb://flowmaster-workflow-service
+          predicates:
+            - Path=/v3/api-docs/workflow
+          filters:
+            - RewritePath=/v3/api-docs/workflow, /workflow-service/v3/api-docs
 
       # 默认过滤器
       default-filters:
-        - name: RequestRateLimiter
-          args:
-            redis-rate-limiter.replenishRate: 100
-            redis-rate-limiter.burstCapacity: 200
-            redis-rate-limiter.requestedTokens: 1
         - AddRequestHeader=X-Gateway-Source, flowmaster-gateway
         - AddResponseHeader=X-Gateway-Source, flowmaster-gateway
+        - AddRequestHeader=X-Request-Time, ${T(java.time.Instant).now().toString()}
 
   # Redis配置
   data:
     redis:
       host: localhost
       port: 6379
-      password: 
+      password: flowmaster123
       database: 0
       timeout: 5000ms
       lettuce:
@@ -95,6 +150,17 @@ spring:
           max-wait: -1ms
           max-idle: 8
           min-idle: 0
+
+# Eureka客户端配置
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
 
   # 安全配置
   security:
@@ -115,6 +181,15 @@ springdoc:
     displayOperationId: true
     showExtensions: true
     showCommonExtensions: true
+    urls:
+      - name: Gateway API
+        url: /v3/api-docs
+      - name: User Service
+        url: /v3/api-docs/user
+      - name: Auth Service
+        url: /v3/api-docs/auth
+      - name: Workflow Service
+        url: /v3/api-docs/workflow
 
 # 监控配置
 management:

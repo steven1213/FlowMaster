@@ -11,15 +11,25 @@ spring:
     active: dev
   
   cloud:
+    nacos:
+      discovery:
+        enabled: false  # 禁用Nacos服务发现
+      config:
+        enabled: false
     config:
       enabled: false
-    discovery:
+      import-check:
+        enabled: false
+    compatibility-verifier:
       enabled: false
+
+  main:
+    allow-bean-definition-overriding: true
   
   # 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/flowmaster?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/flowable?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:flowmaster123}
     hikari:
@@ -32,7 +42,7 @@ spring:
   # JPA配置
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none  # 禁用JPA自动建表，让Flowable控制
     show-sql: true
     properties:
       hibernate:
@@ -49,7 +59,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD:flowmaster123}
       database: 2
       timeout: 2000ms
       lettuce:
@@ -59,11 +69,29 @@ spring:
           min-idle: 0
           max-wait: -1ms
 
+# Eureka客户端配置
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
 # Flowable配置
 flowable:
   # 数据库配置
   database-schema-update: true
-  database-schema: flowable
+  # 禁用自动配置，让Flowable完全控制数据库
+  check-process-definitions: false
+  # 禁用EventRegistry引擎
+  eventregistry:
+    enabled: false
+  # 禁用IDM引擎
+  idm:
+    enabled: false
   
   # 流程引擎配置
   process:
@@ -86,19 +114,6 @@ flowable:
     max-pool-size: 10
     queue-capacity: 100
     keep-alive-seconds: 60
-  
-  # REST API配置
-  rest:
-    app:
-      id: flowmaster-workflow
-      name: FlowMaster Workflow
-      description: FlowMaster工作流引擎REST API
-    admin:
-      user-id: admin
-      password: admin123
-      first-name: Admin
-      last-name: User
-      email: admin@flowmaster.com
 
 # 工作流配置
 workflow:
@@ -149,7 +164,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,flowable
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: always

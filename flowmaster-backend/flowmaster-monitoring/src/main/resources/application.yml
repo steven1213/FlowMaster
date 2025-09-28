@@ -7,6 +7,29 @@ spring:
   application:
     name: flowmaster-monitoring
   
+  cloud:
+    nacos:
+      discovery:
+        enabled: false  # 禁用Nacos服务发现
+      config:
+        enabled: false
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+    compatibility-verifier:
+      enabled: false
+
+  main:
+    allow-bean-definition-overriding: true
+
+  # 禁用数据源自动配置
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+  
   data:
     elasticsearch:
       repositories:
@@ -17,8 +40,8 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: 
-      database: 1
+      password: flowmaster123
+      database: 3
       timeout: 5000ms
       lettuce:
         pool:
@@ -26,21 +49,24 @@ spring:
           max-wait: -1ms
           max-idle: 8
           min-idle: 0
-  
-  # Spring Cloud Sleuth配置
-  sleuth:
-    enabled: true
-    zipkin:
-      base-url: http://localhost:9411
-    sampler:
-      probability: 1.0
 
+# Eureka客户端配置
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+  
 # 监控配置
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,zipkin
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: always
@@ -55,6 +81,9 @@ management:
         http.server.requests: 0.5, 0.95, 0.99
       slo:
         http.server.requests: 50ms, 100ms, 200ms, 500ms
+  tracing:
+    sampling:
+      probability: 1.0
 
 # 日志配置
 logging:
@@ -77,3 +106,4 @@ monitoring:
   tracing:
     sample-rate: 1.0
     retention-period: 3d
+

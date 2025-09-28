@@ -11,10 +11,20 @@ spring:
     active: dev
   
   cloud:
+    nacos:
+      discovery:
+        enabled: false  # 禁用Nacos服务发现
+      config:
+        enabled: false
     config:
       enabled: false
-    discovery:
+      import-check:
+        enabled: false
+    compatibility-verifier:
       enabled: false
+
+  main:
+    allow-bean-definition-overriding: true
   
   # 数据源配置
   datasource:
@@ -49,7 +59,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD:flowmaster123}
       database: 1
       timeout: 2000ms
       lettuce:
@@ -58,6 +68,17 @@ spring:
           max-idle: 8
           min-idle: 0
           max-wait: -1ms
+
+# Eureka客户端配置
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
 
 # JWT配置
 jwt:

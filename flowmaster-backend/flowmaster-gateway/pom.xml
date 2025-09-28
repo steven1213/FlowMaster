@@ -32,28 +32,31 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
-            <version>${spring-cloud.version}</version>
+        </dependency>
+
+        <!-- Spring Cloud -->
+        <!-- Eureka Client -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
         <!-- Spring Cloud LoadBalancer -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
-            <version>${spring-cloud.version}</version>
         </dependency>
 
         <!-- Spring Cloud OpenFeign -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
-            <version>${spring-cloud.version}</version>
         </dependency>
 
         <!-- Spring Cloud Circuit Breaker -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
-            <version>${spring-cloud.version}</version>
         </dependency>
 
         <!-- Spring Boot Starter Security -->

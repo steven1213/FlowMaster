@@ -2,8 +2,8 @@ package com.flowmaster.monitoring.infrastructure.tracing;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cloud.sleuth.Span;
-import org.springframework.cloud.sleuth.Tracer;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;

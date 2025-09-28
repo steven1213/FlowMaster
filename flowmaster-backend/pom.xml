@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>3.2.0</spring-boot.version>
         <spring-cloud.version>2022.0.2</spring-cloud.version>
-        <flowable.version>7.0.0</flowable.version>
+        <flowable.version>6.7.2</flowable.version>
         <mybatis-plus.version>3.5.4</mybatis-plus.version>
         <druid.version>1.2.20</druid.version>
         <jwt.version>0.11.5</jwt.version>
@@ -134,23 +134,19 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Spring Cloud Sleuth -->
+            <!-- Spring Cloud Tracing (replacement for Sleuth) -->
             <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-sleuth</artifactId>
-                <version>${spring-cloud-sleuth.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-sleuth-zipkin</artifactId>
-                <version>${spring-cloud-sleuth.version}</version>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-tracing-bom</artifactId>
+                <version>1.2.0</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
             <!-- MySQL -->
             <dependency>
-                <groupId>mysql</groupId>
-                <artifactId>mysql-connector-java</artifactId>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
                 <version>8.0.33</version>
             </dependency>
 
@@ -158,6 +154,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
+                <version>2.15.2</version>
             </dependency>
 
             <!-- Spring Boot Starters -->
@@ -196,69 +193,16 @@
                 <artifactId>spring-boot-starter-actuator</artifactId>
                 <version>${spring-boot.version}</version>
             </dependency>
-
-            <!-- Spring Cloud -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+                <artifactId>spring-cloud-dependencies-parent</artifactId>
+                <type>pom</type>
+                <version>${spring-cloud.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-config</artifactId>
-            </dependency>
-
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-gateway</artifactId>
-            </dependency>
-
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-loadbalancer</artifactId>
-            </dependency>
-
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-openfeign</artifactId>
-            </dependency>
-
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
-            </dependency>
 
         </dependencies>
     </dependencyManagement>
-
-    <dependencies>
-        <!-- FlowMaster Common - 所有子模块都需要 -->
-        <dependency>
-            <groupId>com.flowmaster</groupId>
-            <artifactId>flowmaster-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <!-- Lombok - 所有子模块都需要 -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Test Dependencies - 所有子模块都需要 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
 
     <build>
         <pluginManagement>

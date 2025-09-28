@@ -1,28 +1,46 @@
 server:
-  port: 8848
-  servlet:
-    context-path: /nacos
+  port: 8761
 
 spring:
   application:
     name: flowmaster-registry
   
+  config:
+    import:
+      - optional:nacos:flowmaster-registry.yml
+  
   cloud:
     nacos:
-      discovery:
-        server-addr: localhost:8848
-        namespace: flowmaster
-        group: DEFAULT_GROUP
-        metadata:
-          version: 1.0.0
-          region: beijing
-          zone: beijing-zone
       config:
-        server-addr: localhost:8848
-        namespace: flowmaster
-        group: DEFAULT_GROUP
-        file-extension: yml
-        refresh-enabled: true
+        enabled: false
+        import-check:
+          enabled: false
+      discovery:
+        enabled: false
+    # 禁用兼容性检查
+    compatibility-verifier:
+      enabled: false
+
+  # 禁用数据源自动配置
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+
+# Eureka服务器配置
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    enable-self-preservation: false
+    eviction-interval-timer-in-ms: 10000
 
 # 监控配置
 management:
@@ -46,21 +64,3 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
-
-# Nacos配置
-nacos:
-  server:
-    addr: localhost:8848
-    namespace: flowmaster
-    group: DEFAULT_GROUP
-  client:
-    service:
-      name: flowmaster-registry
-      weight: 1
-      healthy: true
-      enabled: true
-      ephemeral: true
-      cluster-name: DEFAULT
-    naming:
-      load-balancer-cache-millis: 10000
-      load-balancer-cache-update-threshold: 1000

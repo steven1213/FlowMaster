@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @SpringBootApplication(scanBasePackages = {
     "com.flowmaster.workflow",
     "com.flowmaster.common"
+}, exclude = {
+    org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class
 })
 @EnableJpaAuditing
 @EnableTransactionManagement

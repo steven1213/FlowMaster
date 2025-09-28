@@ -3,7 +3,7 @@ package com.flowmaster.registry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
 
 /**
  * FlowMaster 服务注册与发现启动类
@@ -12,10 +12,9 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
  * @since 1.0.0
  */
 @SpringBootApplication(scanBasePackages = {
-    "com.flowmaster.registry",
-    "com.flowmaster.common"
+    "com.flowmaster.registry"
 })
-@EnableDiscoveryClient
+@EnableEurekaServer
 @Slf4j
 public class RegistryServiceApplication {
 
